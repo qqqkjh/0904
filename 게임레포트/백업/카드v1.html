@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+
+    <title>Document</title>
+
+    <style>
+        img {
+
+            width: 70px;
+
+            height: 100px;
+
+        }
+    </style>
+
+</head>
+
+
+
+<body>
+    
+
+    <div>
+        
+    
+    </div>
+
+
+
+    <script>
+
+        var srcs = [];
+        var cards;
+
+
+        window.onload = function () {
+
+
+
+
+            var put = '';
+
+
+            for (var k = 0; k < 2; k++) {
+
+                for (var i = 1; i < 3; i++) {    //4
+
+                    for (var j = 1; j < 11; j++) {   //13
+
+                        put += '<img src="cardImage//' + i + '_' + j + '.png">';
+
+                    }
+
+                }
+
+            }
+
+            var divtag = document.querySelector('div');
+
+            divtag.innerHTML = put;
+
+
+
+            cards = document.querySelectorAll('img');
+
+
+
+
+
+            for (var i = 0; i < cards.length; i++) {
+
+                srcs[i] = cards[i].src;
+
+            }
+
+
+
+
+
+
+
+            function hide() {
+
+                for (var i = 0; i < cards.length; i++) {
+
+                    cards[i].src = "cardImage/cardback.jpg";
+
+                }
+
+            }
+
+            function mix() {
+
+                srcs.sort((a, b) => Math.random() - 0.5);
+
+
+                for (var i = 0; i < cards.length; i++) {
+
+                    cards[i].src = srcs[i];
+
+                }
+
+            }
+
+
+
+
+            for (var i = 0; i < cards.length; i++) {
+
+                cards[i].setAttribute("id", i);
+
+            }
+
+
+            for (var i = 0; i < cards.length; i++) {
+
+                cards[i].setAttribute("onclick", "flip(this.id)");
+
+            }
+
+            mix();
+            hide();
+          
+
+        }
+
+
+        var pickarr = [];
+
+        var arrnum = 0;
+
+        var prenum;
+
+
+        function flip(i) {
+
+            cards[i].src = srcs[i];
+
+            pickarr[arrnum++] = srcs[i];
+
+
+            if (arrnum == 1) {
+
+                prenum = i;
+
+            }
+
+
+            if (arrnum == 2) {
+
+                if (pickarr[0] == pickarr[1]) {
+
+
+                } else {
+
+                    setTimeout(function () {
+
+                        cards[prenum].src = "cardImage/cardback.jpg";
+
+                        cards[i].src = "cardImage/cardback.jpg";
+
+                    }, 200);
+
+
+
+                }
+
+                arrnum = 0;
+
+            }
+            
+
+
+        }
+         
+    </script>
+
+</body>
+
+</html>
