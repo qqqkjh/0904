@@ -1,0 +1,641 @@
+<!DOCTYPE html>
+
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+
+    <title>Document</title>
+
+    <style>
+        img {
+            width: 70px;
+            height: 100px;
+        }
+        #background {
+            width: 420px;
+            height: 1000px;
+            background-image: url("background.jpg");
+        }
+        font {
+            font-family: 'Gill Sans', 'Gill Sans MT', Calibri, 'Trebuchet MS', sans-serif;
+        }
+    </style>
+
+</head>
+
+
+
+<body>
+
+    <button>보이기</button>
+
+    <button>감추기</button>
+
+    <button>초기화</button>
+
+    <button>게임시작</button>
+
+    <button>카드매수선택</button>
+
+    <button>힌트</button>
+
+    <br><br>
+
+    <button>3장모드</button>
+
+    <button>3장모드끄기</button>
+
+
+    <br><br>
+
+
+
+
+    <div id="background">
+        <div class="cardgame"></div>
+        <div class="timer"></div>
+        <div class="scoreboard"></div>
+    </div>
+
+    <audio id="cardsound" src="cardsound.wav"></audio>
+    <audio id="chime" src="chime.wav"></audio>
+    <audio id="wrong" src="wrong.wav"></audio>
+    <audio id="levelup" src="levelup.wav"></audio>
+
+    <script>
+
+        //!필드부분
+
+        //이미지필드
+        //cards는 블록주소, src는 이미지소스
+        var srcs = [];
+        var cards;
+        
+        //카드를 감출때 맞춘카드는 감추지않게 하기위한 bool배열
+        var checksum = [];
+        
+        //게임상태 
+        var GAMESTART = 0;
+        var GAMEOVE = 1;
+        var gamestatus = GAMEOVE; //초기값
+
+        //스코어필드
+        var score = 0; //점수
+        var level = 1; //레벨
+
+        //랭킹용
+        var maxscore = 0;
+
+        //라이프
+        var life = 5;
+
+        //안내문구
+        var gid = "";
+
+
+        //타이머필드
+        var SetTime = 0; //시간
+
+
+        //힌트 횟수
+        var seenum = 5;
+
+        //이미지갯수매칭k,i,j
+        var cardmath = 2;
+        var cardI = 3;
+        var cardJ = 4;
+
+        //flip 필드
+        var pickarr = [];
+        var arrnum = 0;
+        var prenum = 0;
+        var prenum2 = 0;
+        var count = 0;
+
+        //사운드
+        var cardsound = document.getElementById("cardsound");
+        var chime = document.getElementById("chime");
+        var wrong = document.getElementById("wrong");
+        var levelup = document.getElementById("levelup");
+
+
+        //3장모드
+        var three = false;
+
+        //버튼값들 불러오기
+        var btns = document.querySelectorAll('button');
+
+
+        //시작
+        window.onload = cardgame();
+
+
+
+
+
+        //!메인함수
+        function cardgame() {
+
+
+            //반복문 이용해서 이미지 넣기 
+            putimg();
+
+
+            // '보이기' button
+            btns[0].setAttribute("onclick", "show()");
+
+
+            //'감추기'button
+            btns[1].setAttribute("onclick", "hide()");
+
+
+            //'섞기'button
+            btns[2].setAttribute("onclick", "mix()");
+
+
+
+            //'게임시작' button
+            btns[3].setAttribute("onclick", "start()");
+
+
+            //'카드매수선택' button
+            btns[4].setAttribute("onclick", "cardnum()");
+
+
+            //'힌트' button
+            btns[5].setAttribute("onclick", "see()");
+
+            //'3장모드' button
+            btns[6].setAttribute("onclick", "threeon()");
+
+            //끄기
+            btns[7].setAttribute("onclick", "threeoff()");
+
+
+        }
+
+
+
+
+
+        //!함수부분시작
+
+
+
+        //이미지넣는 함수
+        function putimg() {
+            var put = '';
+
+
+            for (var k = 0; k < cardmath; k++) {
+
+                for (var i = 1; i < cardI; i++) {    //4
+
+                    for (var j = 1; j < cardJ; j++) {   //13
+
+                        put += '<img src="cardImage//' + i + '_' + j + '.png">';
+
+                    }
+
+                }
+
+            }
+
+            var divtag = document.querySelector('.cardgame');
+
+            //이미지 블록들 생성
+            divtag.innerHTML = put;
+
+
+            cards = document.querySelectorAll('img');
+
+
+            //현재 지정된 카드인라인블록의 이미지의 소스를 따로 src배열에 저장
+            // 맞춘카드는 감추지 않게 하기
+            for (var i = 0; i < cards.length; i++) {
+
+                srcs[i] = cards[i].src;
+                checksum[i] = true;
+            }
+        }
+
+        //!이벤트리스너로 카드이미지에 등록된함수
+        function flip(i) {
+
+
+
+            if (gamestatus == GAMESTART) {
+
+
+                cardsound.play();
+                cards[i].removeAttribute("onclick"); //카드를 고르면 이벤트제거 중복클릭방지
+
+                cards[i].src = srcs[i];
+
+                pickarr[arrnum++] = srcs[i];
+
+
+
+
+                //첫번째 카드 id 저장
+
+                if (arrnum == 1) {
+
+                    prenum = i;
+
+
+                }
+
+
+                if (arrnum == 2) {
+                    //3장
+                    if (three) {
+
+                        prenum2 = i;
+
+                    } else {
+                        //일반적인 2장일때 작동
+                        if (checkcard()) {
+
+                            chime.play();
+                            setTimeout(function () {
+
+                                //alert("정답");
+                            }, 200);
+
+                            count += cardmath;
+                            score += (10 * level); //레벨당 오르는점수 다름
+                            checksum[i] = false;
+                            checksum[prenum] = false;
+                            //카드쌍이 맞으면 이벤트 제거한채로 놔두기
+
+
+                        } else {
+                            wrong.play();
+                            setTimeout(function () {
+
+                                cards[prenum].src = "cardImage/cardback.jpg";
+                                cards[prenum].setAttribute("onclick", "flip(this.id)");
+                                //틀리면 제거한 두카드의 이벤트 재생성 
+
+                                cards[i].src = "cardImage/cardback.jpg";
+                                cards[i].setAttribute("onclick", "flip(this.id)");
+
+                            }, 200);
+
+                            setTimeout(function () {
+
+                                //alert("틀림");
+                            }, 200);
+
+                            life--;
+
+
+
+                        }
+
+                        arrnum = 0;
+                        pickarr = []; //사이클이 끝난후 배열초기화 
+
+                    }
+                }
+                //세장모드일경우 작동
+                if ((arrnum == 3) && three) {
+                    if (checkcard()) {
+
+                        chime.play();
+                        setTimeout(function () {
+
+                            //alert("정답");
+                        }, 200);
+
+                        count += cardmath;
+                        score += (10 * level);
+                        checksum[i] = false;
+                        checksum[prenum] = false;
+                        checksum[prenum2] = false;
+                        //3장
+
+
+                    } else {
+                        wrong.play();
+                        setTimeout(function () {
+
+                            cards[i].src = "cardImage/cardback.jpg";
+                            cards[i].setAttribute("onclick", "flip(this.id)");
+
+                            cards[prenum].src = "cardImage/cardback.jpg";
+                            cards[prenum].setAttribute("onclick", "flip(this.id)");
+
+                            cards[prenum2].src = "cardImage/cardback.jpg";
+                            cards[prenum2].setAttribute("onclick", "flip(this.id)");
+                            //틀리면 제거한 세카드의 이벤트 재생성 
+
+
+
+                        }, 200);
+
+                        setTimeout(function () {
+
+                            //alert("틀림");
+                        }, 200);
+
+                        life--;
+
+                    }
+
+                    arrnum = 0;
+                    pickarr = []; //사이클이 끝난후 배열초기화                     
+
+                }
+
+
+                if (count >= ((cardI - 1) * (cardJ - 1) * cardmath)) {
+                    levelup.play();
+                    level += 1;
+                    setTimeout(function () {
+
+                        alert("클리어! 레벨업!");
+                    }, 700);
+                    count = 0;
+                    cardJ++; //레벨업하면 카드 매수 늘어남
+                    seenum = seenum + 5;
+
+                    gid = " <font size='6'>게임시작버튼을 눌러주세요</font> ";
+
+                    
+                    clearInterval(tid);
+
+                    gamestatus = GAMEOVE;
+                    btns[3].disabled = false;
+                }
+
+            }
+        }
+        //카드 쌍 체크용 
+        function checkcard() {
+            for (var i = 0; i < cardmath - 1; i++) {
+                if (pickarr[i] != pickarr[i + 1]) {
+                    return false;
+                }
+            }
+            return true;
+        }
+
+
+
+        //타이머
+        var timer = document.querySelector('.timer');
+
+
+        function msg_time() {	// 1초씩 카운트
+            if (gamestatus == GAMESTART) {
+                m = Math.floor(SetTime / 60) + "분 " + (SetTime % 60) + "초";	// 남은 시간 계산
+
+                var msg = "현재 남은 시간은 <font size='6'; color='red'>" + m + "</font> 입니다.";
+
+                timer.innerHTML = msg;		// div 영역에 보여줌 
+
+                SetTime--;					// 1초씩 감소
+
+                if (SetTime < 0) {			// 시간이 종료 되었으면..
+
+                    // 타이머 해제+스코어보드해제
+                    clearInterval(sv);
+                    
+                    alert("타임오버");
+                    gamestatus = GAMEOVE;
+
+                    reset();
+
+                }
+            }
+        }
+
+        //스코어보드
+        var scoreboard = document.querySelector('.scoreboard');
+
+
+        function view_score() {
+            var v = "현재 점수 : <font size='6'; color='green'>" + score + "</font>"
+                + " <br>현재 level : <font size='6'; color='blue'>" + level + "</font>"
+                + " <br>현재 남은 life : <font size='6'; color='Indigo'>" + life + "</font>"
+                + " <br>현재 남은 힌트 : <font size='6'; color='Orange'>" + seenum + "</font>"
+                + " <br>현재 최고 점수 : <font size='6'; color='green'>" + maxscore + "</font>"
+                + " <br>" + gid;
+
+            scoreboard.innerHTML = v;
+
+
+            if (life <= 0) {
+                clearInterval(sv);
+                
+                alert("게임오버 모든 라이프 소모");
+                gamestatus = GAMEOVE;
+
+                reset();
+
+
+            }
+
+        }
+
+        //시작버튼함수
+        function start() {
+
+            pickarr = [];
+
+            putimg(); //시작시마다 새로 이미지 그리고 매칭하고 
+
+            //이미지 블록 아이디 재지정한뒤 이벤트삽입
+            for (var i = 0; i < cards.length; i++) {
+
+                cards[i].setAttribute("id", i);
+
+            }
+
+
+            for (var i = 0; i < cards.length; i++) {
+
+                cards[i].setAttribute("onclick", "flip(this.id)");
+
+            }
+
+            mix(); //이미지섞고
+
+            life = 5 + ((level - 1) * 5); //레벨증가에따라 라이프증가
+            SetTime = 330 - (level * 30); //레벨증가에따라 타이머감소
+
+            sv = setInterval('view_score()', 1000); // 스코어보드 호출 특정조건전까지 무한호출
+            tid = setInterval('msg_time()', 1000); //타이머 호출
+
+            //가이드문구초기화
+            gid = "";
+
+
+            //3초간보여주고 게임시작
+            setTimeout(function () {
+                hide();
+                gamestatus = GAMESTART;
+
+            }, 3000);
+
+            btns[3].disabled = true;
+        }
+
+
+
+        //모든카드보여주기
+        function show() {
+            gamestatus = GAMEOVE;
+            for (var i = 0; i < cards.length; i++) {
+
+                cards[i].src = srcs[i];
+
+            }
+
+        }
+
+        //감추기 
+        //연결된이미지를 뒤집힌카드로 변경
+        //checksum으로 맞춘카드는 감추지 않게 하기
+        function hide() {
+            gamestatus = GAMESTART;
+            for (var i = 0; i < cards.length; i++) {
+                if (checksum[i] == true)
+                    cards[i].src = "cardImage/cardback.jpg";
+
+            }
+
+        }
+        //섞기
+        //math 함수를 이용한 랜덤소트과 이후 카드블록에 랜덤소트된 이미지배열을 카드블록에 차례대로연결       
+        function mix() {
+
+            btns[3].disabled = false;
+            gamestatus = GAMEOVE;
+            pickarr = [];
+            count = 0;
+            srcs.sort((a, b) => Math.random() - 0.5);
+
+            for (var i = 0; i < cards.length; i++) {
+
+                cards[i].src = srcs[i];
+
+            }
+
+        }
+        //카드매수선택모드함수
+        function cardnum() {
+            gamestatus = GAMEOVE; //코드 꼬임방지를 위해 게임 강제종료 후 전부 초기화
+            input = prompt('매수입력(2~14)', 6);
+            cardJ = input;
+
+            allreset();
+
+            putimg(); //새로그리기
+        }
+
+
+
+        //힌트 (카드잠시보여주기) 함수
+        function see() {
+            if (seenum > 0) {
+                gamestatus = GAMEOVE;
+                show();
+                setTimeout(function () {
+                    hide();
+                    gamestatus = GAMESTART;
+                }, 2000);
+
+
+                seenum--;
+            }
+        }
+
+        //3장 모드 끄기켜기 함수
+        function threeon() {
+            gamestatus = GAMEOVE;
+            three = true;
+            cardmath = 3;
+
+
+            allreset();
+            putimg();
+        }
+
+        function threeoff() {
+            gamestatus = GAMEOVE;
+            three = false;
+            cardmath = 2;
+
+
+            allreset();
+            putimg();
+        }
+
+
+
+        //모든 필드 리셋(모드를 바꿀시사용)
+        function allreset() {
+            
+            clearInterval(tid);
+            
+            highscore()
+            pickarr = [];
+            arrnum = 0;
+            prenum = 0;
+            prenum2 = 0;
+            count = 0;
+
+            score = 0;
+            life = 5;
+            level = 1;
+            seenum = 5;
+
+            gid = " <font size='6'>게임시작 버튼을 눌러주세요</font> ";
+
+            srcs = [];
+            cards = "";
+
+            btns[3].disabled = false;
+
+            putimg();
+        }
+        //일부 자원만 리셋
+        function reset() {
+            
+            clearInterval(tid);
+           
+            highscore()
+            pickarr = [];
+            arrnum = 0;
+            prenum = 0;
+            prenum2 = 0;
+            count = 0;
+            score = 0;
+
+            life = 5;
+            seenum = 5;
+
+            gid = " <font size='6'>게임시작 버튼을 눌러주세요</font> ";
+            btns[3].disabled = false;
+        }
+
+        function highscore() {
+            if (maxscore < score) {
+                maxscore = score;
+            }
+        }
+
+    </script>
+
+</body>
+
+</html>
